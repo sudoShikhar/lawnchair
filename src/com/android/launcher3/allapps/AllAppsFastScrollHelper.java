@@ -15,6 +15,8 @@
  */
 package com.android.launcher3.allapps;
 
+import android.util.DisplayMetrics;
+
 import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 
@@ -23,6 +25,10 @@ import com.android.launcher3.allapps.AlphabeticalAppsList.FastScrollSectionInfo;
 public class AllAppsFastScrollHelper {
 
     private static final int NO_POSITION = -1;
+    // Lower = faster. Default LinearSmoothScroller is comparatively slow for A–Z scrubbing.
+    private static final float MS_PER_INCH_FAST_SCROLL = 8f;
+    // For very large jumps, do an immediate scroll first, then let layout settle.
+    private static final int LARGE_JUMP_THRESHOLD_ITEMS = 120;
 
     private int mTargetFastScrollPosition = NO_POSITION;
 
@@ -40,7 +46,13 @@ public class AllAppsFastScrollHelper {
         if (mTargetFastScrollPosition == info.position) {
             return;
         }
+        int from = mTargetFastScrollPosition;
         mTargetFastScrollPosition = info.position;
+        // If user is scrubbing quickly across many sections, skip long smooth animations.
+        if (from != NO_POSITION && Math.abs(mTargetFastScrollPosition - from) >= LARGE_JUMP_THRESHOLD_ITEMS) {
+            mRv.scrollToPosition(mTargetFastScrollPosition);
+            return;
+        }
         mRv.getLayoutManager().startSmoothScroll(new MyScroller(mTargetFastScrollPosition));
     }
 
@@ -72,6 +84,11 @@ public class AllAppsFastScrollHelper {
         @Override
         protected int getVerticalSnapPreference() {
             return SNAP_TO_ANY;
+        }
+
+        @Override
+        protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
+            return MS_PER_INCH_FAST_SCROLL / displayMetrics.densityDpi;
         }
 
         @Override

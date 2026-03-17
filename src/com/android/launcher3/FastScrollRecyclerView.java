@@ -32,6 +32,9 @@ import com.android.launcher3.compat.AccessibilityManagerCompat;
 import com.android.launcher3.views.RecyclerViewFastScroller;
 import com.patrykmichalik.opto.core.PreferenceExtensionsKt;
 
+import java.util.Collections;
+import java.util.List;
+
 import app.lawnchair.preferences2.PreferenceManager2;
 
 /**
@@ -86,6 +89,9 @@ public abstract class FastScrollRecyclerView extends RecyclerView {
      * Returns the height of the fast scroll bar
      */
     public int getScrollbarTrackHeight() {
+        if (mScrollbar == null) {
+            return 0;
+        }
         return mScrollbar.getHeight() - getScrollBarTop() - getScrollBarMarginBottom();
     }
 
@@ -127,6 +133,9 @@ public abstract class FastScrollRecyclerView extends RecyclerView {
      * AvailableScrollBarHeight = Total height of the visible view - thumb height
      */
     protected int getAvailableScrollBarHeight() {
+        if (mScrollbar == null) {
+            return 0;
+        }
         return getScrollbarTrackHeight() - mScrollbar.getThumbHeight();
     }
 
@@ -141,6 +150,9 @@ public abstract class FastScrollRecyclerView extends RecyclerView {
      */
     protected void synchronizeScrollBarThumbOffsetToViewScroll(int scrollY,
             int availableScrollHeight) {
+        if (mScrollbar == null) {
+            return;
+        }
         // Only show the scrollbar if there is height to be scrolled
         if (availableScrollHeight <= 0) {
             mScrollbar.setThumbOffsetY(-1);
@@ -164,6 +176,9 @@ public abstract class FastScrollRecyclerView extends RecyclerView {
      * @param ev MotionEvent in {@param eventSource}
      */
     public boolean shouldContainerScroll(MotionEvent ev, View eventSource) {
+        if (mScrollbar == null) {
+            return computeVerticalScrollOffset() == 0;
+        }
         float[] point = new float[2];
         point[0] = ev.getX();
         point[1] = ev.getY();
@@ -184,6 +199,14 @@ public abstract class FastScrollRecyclerView extends RecyclerView {
      */
     public boolean supportsFastScrolling() {
         return true;
+    }
+
+    /**
+     * Returns the section labels to render in the fast scroll rail (e.g. A–Z).
+     * Subclasses can override to provide meaningful section labels.
+     */
+    public List<CharSequence> getFastScrollSectionNames() {
+        return Collections.emptyList();
     }
 
     /**

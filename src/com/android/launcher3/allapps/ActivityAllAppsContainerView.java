@@ -60,12 +60,15 @@ import android.view.ViewOutlineProvider;
 import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Px;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.graphics.ColorUtils;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.launcher3.DeviceProfile;
@@ -92,7 +95,7 @@ import com.android.launcher3.util.Preconditions;
 import com.android.launcher3.util.Themes;
 import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.BaseDragLayer;
-import com.android.launcher3.views.RecyclerViewFastScroller;
+import com.android.launcher3.views.AlphabeticalIndexBar;
 import com.android.launcher3.views.ScrimView;
 import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
 import com.patrykmichalik.opto.core.PreferenceExtensionsKt;
@@ -174,7 +177,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected AllAppsPagedView mViewPager;
     protected FloatingHeaderView mHeader;
     protected View mBottomSheetBackground;
-    protected RecyclerViewFastScroller mFastScroller;
+    protected AlphabeticalIndexBar mAlphabeticalIndexBar;
 
     /**
      * View that defines the search box. Result is rendered inside
@@ -183,7 +186,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected View mSearchContainer;
     protected SearchUiManager mSearchUiManager;
     protected boolean mUsingTabs;
-    protected RecyclerViewFastScroller mTouchHandler;
+    protected AlphabeticalIndexBar mTouchHandler;
 
     /**
      * {@code true} when rendered view is in search state instead of the scroll
@@ -284,7 +287,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      * onFinishInflate -> onPostCreate
      */
     protected void initContent() {
-        showFastScroller = PreferenceExtensionsKt.firstBlocking(pref2.getShowScrollbar());
+        // Vertical fast scroller is intentionally disabled in favor of the bottom A–Z bar.
+        showFastScroller = false;
 
         mMainAdapterProvider = mSearchUiDelegate.createMainAdapterProvider();
 
@@ -300,9 +304,38 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         mBottomSheetBackground = findViewById(R.id.bottom_sheet_background);
         mBottomSheetHandleArea = findViewById(R.id.bottom_sheet_handle_area);
         mSearchRecyclerView = findViewById(R.id.search_results_list_view);
-        mFastScroller = findViewById(R.id.fast_scroller);
-        mFastScroller.setPopupView(findViewById(R.id.fast_scroller_popup));
-        mFastScroller.setVisibility(showFastScroller ? VISIBLE : INVISIBLE);
+        mAlphabeticalIndexBar = findViewById(R.id.alphabetical_index_bar);
+        if (mAlphabeticalIndexBar != null) {
+            TextView preview = findViewById(R.id.alphabetical_index_preview);
+            mAlphabeticalIndexBar.setPreviewView(preview);
+
+            // Apply "safe area" (navigation bar inset) as bottom *margin* so the bar sits above
+            // 3-button nav / gesture navigation areas.
+            ViewCompat.setOnApplyWindowInsetsListener(mAlphabeticalIndexBar, (v, insets) -> {
+                int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+                MarginLayoutParams lp = (MarginLayoutParams) v.getLayoutParams();
+                lp.bottomMargin = getResources().getDimensionPixelSize(
+                        R.dimen.alphabetical_index_bar_margin_bottom) + navBottom;
+                v.setLayoutParams(lp);
+                // After changing bar position, ensure lists have enough bottom padding.
+                for (int i = 0; i < mAH.size(); i++) {
+                    if (mAH.get(i) != null) {
+                        mAH.get(i).applyPadding();
+                    }
+                }
+                return insets;
+            });
+
+            // Also re-apply padding after first layout (bar height is 0 before measure).
+            mAlphabeticalIndexBar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or_, ob) -> {
+                for (int i = 0; i < mAH.size(); i++) {
+                    if (mAH.get(i) != null) {
+                        mAH.get(i).applyPadding();
+                    }
+                }
+            });
+            ViewCompat.requestApplyInsets(mAlphabeticalIndexBar);
+        }
         mSearchContainer = inflateSearchBar();
         if (!isSearchBarFloating()) {
             // Add the search box above everything else in this container (if the flag is
@@ -426,14 +459,18 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (!mSearchTransitionController.isRunning() && goingToSearch == isSearching()) {
             return;
         }
-        mFastScroller.setVisibility(goingToSearch ? INVISIBLE : VISIBLE);
+        if (mAlphabeticalIndexBar != null) {
+            mAlphabeticalIndexBar.setVisibility(goingToSearch ? INVISIBLE : VISIBLE);
+        }
         if (goingToSearch) {
             // Fade out the button to pause work apps.
             mWorkManager.onActivePageChanged(SEARCH);
         } else if (mAllAppsTransitionController != null) {
             // If exiting search, revert predictive back scale on all apps
             mAllAppsTransitionController.animateAllAppsToNoScale();
-            mFastScroller.setVisibility(showFastScroller ? VISIBLE : INVISIBLE);
+            if (mAlphabeticalIndexBar != null) {
+                mAlphabeticalIndexBar.setVisibility(VISIBLE);
+            }
         }
         mSearchTransitionController.animateToState(goingToSearch, durationMs,
                 /* onEndRunnable = */ () -> {
@@ -470,9 +507,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         if (rv == null) {
             return true;
         }
-        if (rv.getScrollbar() != null
-                && rv.getScrollbar().getThumbOffsetY() >= 0
-                && dragLayer.isEventOverView(rv.getScrollbar(), ev)) {
+        if (mAlphabeticalIndexBar != null && dragLayer.isEventOverView(mAlphabeticalIndexBar, ev)) {
             return false;
         }
         // Scroll if not within the container view (e.g. over large-screen scrim).
@@ -511,7 +546,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             }
         }
         if (mTouchHandler != null) {
-            mTouchHandler.endFastScrolling();
+            // No explicit end action needed for the bottom alphabetical bar.
         }
         if (mHeader != null && mHeader.getVisibility() == VISIBLE) {
             mHeader.reset(animate);
@@ -595,8 +630,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             // Will be called at the end of the animation.
             return;
         }
-        if (mAH.get(currentActivePage).mRecyclerView != null) {
-            mAH.get(currentActivePage).mRecyclerView.bindFastScrollbar(mFastScroller);
+        if (mAlphabeticalIndexBar != null && mAH.get(currentActivePage).mRecyclerView != null) {
+            mAlphabeticalIndexBar.setRecyclerView(mAH.get(currentActivePage).mRecyclerView);
         }
         // Header keeps track of active recycler view to properly render header
         // protection.
@@ -677,11 +712,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         setupHeader();
 
         if (isSearchBarFloating()) {
-            // Keep the scroller above the search bar.
-            RelativeLayout.LayoutParams scrollerLayoutParams = (LayoutParams) mFastScroller.getLayoutParams();
-            scrollerLayoutParams.bottomMargin = mSearchContainer.getHeight()
-                    + getResources().getDimensionPixelSize(
-                            R.dimen.fastscroll_bottom_margin_floating_search);
+            // No-op for bottom index bar; it is already anchored to the bottom.
         }
 
         mAllAppsStore.registerIconContainer(mAH.get(AdapterHolder.MAIN).mRecyclerView);
@@ -1124,41 +1155,13 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             return false;
         }
 
-        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
-            AllAppsRecyclerView rv = getActiveRecyclerView();
-            if (rv != null && rv.getScrollbar() != null
-                    && rv.getScrollbar().isHitInParent(ev.getX(), ev.getY(), mFastScrollerOffset)) {
-                mTouchHandler = rv.getScrollbar();
-            } else {
-                mTouchHandler = null;
-            }
-        }
-        if (mTouchHandler != null) {
-            return mTouchHandler.handleTouchEvent(ev, mFastScrollerOffset);
-        }
+        // Do not intercept; the bottom index bar handles its own touch events.
         return false;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        if (!isInAllApps()) {
-            return false;
-        }
-
-        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
-            AllAppsRecyclerView rv = getActiveRecyclerView();
-            if (rv != null && rv.getScrollbar() != null
-                    && rv.getScrollbar().isHitInParent(ev.getX(), ev.getY(), mFastScrollerOffset)) {
-                mTouchHandler = rv.getScrollbar();
-            } else {
-                mTouchHandler = null;
-
-            }
-        }
-        if (mTouchHandler != null) {
-            mTouchHandler.handleTouchEvent(ev, mFastScrollerOffset);
-            return true;
-        }
+        if (!isInAllApps()) return false;
         if (isSearching()
                 && mActivityContext.getDragLayer().isEventOverView(getVisibleContainerView(), ev)) {
             // if in search state, consume touch event.
@@ -1644,7 +1647,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         void setup(@NonNull View rv, @Nullable Predicate<ItemInfo> matcher) {
             mAppsList.updateItemFilter(matcher);
             mRecyclerView = (AllAppsRecyclerView) rv;
-            mRecyclerView.bindFastScrollbar(mFastScroller);
+            if (mAlphabeticalIndexBar != null) {
+                mAlphabeticalIndexBar.setRecyclerView(mRecyclerView);
+            }
             mRecyclerView.setEdgeEffectFactory(createEdgeEffectFactory());
             mRecyclerView.setApps(mAppsList);
             mRecyclerView.setLayoutManager(mLayoutManager);
@@ -1682,6 +1687,15 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 }
                 if (isSearchBarFloating()) {
                     bottomOffset += mSearchContainer.getHeight();
+                }
+                if (mAlphabeticalIndexBar != null && mAlphabeticalIndexBar.getVisibility() == VISIBLE) {
+                    ViewGroup.LayoutParams lp = mAlphabeticalIndexBar.getLayoutParams();
+                    if (lp instanceof MarginLayoutParams) {
+                        bottomOffset += ((MarginLayoutParams) lp).bottomMargin;
+                    }
+                    bottomOffset += mAlphabeticalIndexBar.getHeight();
+                    // Also account for any system insets applied as padding to the bar.
+                    bottomOffset += mAlphabeticalIndexBar.getPaddingBottom();
                 }
                 mRecyclerView.setPadding(mPadding.left, mPadding.top, mPadding.right,
                         mPadding.bottom + bottomOffset);

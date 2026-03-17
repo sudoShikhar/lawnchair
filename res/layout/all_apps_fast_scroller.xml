@@ -14,26 +14,26 @@
      limitations under the License.
 -->
 <merge
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:launcher="http://schemas.android.com/apk/res-auto">
-    <!-- Fast scroller popup -->
-    <TextView
-        android:id="@+id/fast_scroller_popup"
-        style="@style/FastScrollerPopup"
-        android:layout_alignParentEnd="true"
-        android:layout_alignTop="@+id/all_apps_header"
-        android:layout_marginTop="@dimen/all_apps_header_bottom_padding"
-        android:layout_marginEnd="@dimen/fastscroll_popup_margin" />
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <com.android.launcher3.views.RecyclerViewFastScroller
-        android:id="@+id/fast_scroller"
-        android:layout_width="@dimen/fastscroll_width"
-        android:layout_height="wrap_content"
+    <TextView
+        android:id="@+id/alphabetical_index_preview"
+        android:layout_width="36dp"
+        android:layout_height="34dp"
+        android:layout_above="@id/alphabetical_index_bar"
+        android:layout_alignParentStart="true"
+        android:layout_marginBottom="6dp"
+        android:alpha="0"
+        android:background="@drawable/alphabetical_index_preview_bg"
+        android:gravity="center"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textStyle="bold" />
+
+    <com.android.launcher3.views.AlphabeticalIndexBar
+        android:id="@+id/alphabetical_index_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/alphabetical_index_bar_height"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignTop="@+id/all_apps_header"
-        android:layout_marginTop="@dimen/all_apps_header_bottom_padding"
-        android:layout_marginEnd="@dimen/fastscroll_end_margin"
-        launcher:canThumbDetach="true" />
+        android:layout_marginBottom="@dimen/alphabetical_index_bar_margin_bottom" />
 
 </merge>

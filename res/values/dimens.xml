@@ -78,6 +78,10 @@
     <dimen name="fastscroll_popup_width">75dp</dimen>
     <dimen name="fastscroll_popup_height">62dp</dimen>
     <dimen name="fastscroll_popup_padding">13dp</dimen>
+
+    <!-- Bottom alphabetical index bar -->
+    <dimen name="alphabetical_index_bar_height">36dp</dimen>
+    <dimen name="alphabetical_index_bar_margin_bottom">8dp</dimen>
     <dimen name="fastscroll_popup_text_size">32dp</dimen>
     <dimen name="fastscroll_popup_margin">19dp</dimen>
 

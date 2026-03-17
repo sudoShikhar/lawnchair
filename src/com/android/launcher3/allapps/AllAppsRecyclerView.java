@@ -53,6 +53,7 @@ import com.android.launcher3.logging.StatsLogManager;
 import com.android.launcher3.views.ActivityContext;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A RecyclerView with custom fast scroll support for the all apps view.
@@ -200,6 +201,19 @@ public class AllAppsRecyclerView extends FastScrollRecyclerView {
     }
 
     @Override
+    public List<CharSequence> getFastScrollSectionNames() {
+        if (mApps == null) {
+            return List.of();
+        }
+        List<AlphabeticalAppsList.FastScrollSectionInfo> sections = mApps.getFastScrollerSections();
+        // De-dupe while preserving order, since there can be multiple items per section.
+        return sections.stream()
+                .map(s -> s.sectionName)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void onFastScrollCompleted() {
         super.onFastScrollCompleted();
         mFastScrollHelper.onFastScrollCompleted();
@@ -221,6 +235,10 @@ public class AllAppsRecyclerView extends FastScrollRecyclerView {
     @Override
     public void onUpdateScrollbar(int dy) {
         if (mApps == null) {
+            return;
+        }
+        if (mScrollbar == null) {
+            // Vertical fast-scroller is disabled (we use a bottom A–Z index bar instead).
             return;
         }
         List<AllAppsGridAdapter.AdapterItem> items = mApps.getAdapterItems();
