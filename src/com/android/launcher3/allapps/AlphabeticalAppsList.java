@@ -318,7 +318,8 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
                 item.rowIndex = 0;
                 if (BaseAllAppsAdapter.isDividerViewType(item.viewType)
                         || BaseAllAppsAdapter.isPrivateSpaceHeaderView(item.viewType)
-                        || BaseAllAppsAdapter.isPrivateSpaceSysAppsDividerView(item.viewType)) {
+                        || BaseAllAppsAdapter.isPrivateSpaceSysAppsDividerView(item.viewType)
+                        || BaseAllAppsAdapter.isSectionHeaderViewType(item.viewType)) {
                     numAppsInSection = 0;
                 } else if (BaseAllAppsAdapter.isIconViewType(item.viewType)) {
                     if (numAppsInSection % mNumAppsPerRowAllApps == 0) {
@@ -409,6 +410,19 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
         }
         for (int i = 0; i < appList.size(); i++) {
             AppInfo info = appList.get(i);
+            String sectionName = info.sectionName;
+            // Create a new section if the section names do not match
+            if (!sectionName.equals(lastSectionName)) {
+                lastSectionName = sectionName;
+                // Surface an explicit letter header. Skip for private apps because we rely on
+                // contiguous app items for unified background decoration.
+                if (!hasPrivateApps) {
+                    mAdapterItems.add(AdapterItem.asSectionHeader(sectionName));
+                    position++;
+                }
+                mFastScrollerSections.add(new FastScrollSectionInfo(hasPrivateApps ?
+                        mPrivateProfileAppScrollerBadge : sectionName, position));
+            }
             // Apply decorator to private apps.
             if (hasPrivateApps) {
                 mAdapterItems.add(AdapterItem.asAppWithDecorationInfo(info,
@@ -417,14 +431,6 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
                                 true /* decorateTogether */)));
             } else {
                 mAdapterItems.add(AdapterItem.asApp(info));
-            }
-
-            String sectionName = info.sectionName;
-            // Create a new section if the section names do not match
-            if (!sectionName.equals(lastSectionName)) {
-                lastSectionName = sectionName;
-                mFastScrollerSections.add(new FastScrollSectionInfo(hasPrivateApps ?
-                        mPrivateProfileAppScrollerBadge : sectionName, position));
             }
             position++;
         }
