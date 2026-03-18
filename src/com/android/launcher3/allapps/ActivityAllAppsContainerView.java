@@ -321,9 +321,11 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
 
             // Also re-apply padding after first layout (bar height is 0 before measure).
             mAlphabeticalIndexBar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or_, ob) -> {
-                for (int i = 0; i < mAH.size(); i++) {
-                    if (mAH.get(i) != null) {
-                        mAH.get(i).applyPadding();
+                if ((b - t) != (ob - ot)) {
+                    for (int i = 0; i < mAH.size(); i++) {
+                        if (mAH.get(i) != null) {
+                            mAH.get(i).applyPadding();
+                        }
                     }
                 }
             });

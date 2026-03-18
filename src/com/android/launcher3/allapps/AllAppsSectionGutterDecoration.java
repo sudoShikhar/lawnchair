@@ -88,8 +88,8 @@ public class AllAppsSectionGutterDecoration extends RecyclerView.ItemDecoration 
             if (pos > 0) {
                 BaseAllAppsAdapter.AdapterItem prev = apps.getAdapterItems().get(pos - 1);
                 if (BaseAllAppsAdapter.isIconViewType(prev.viewType)
-                        && prev.itemInfo != null
-                        && TextUtils.equals(((AppInfo) prev.itemInfo).sectionName, section)) {
+                        && prev.itemInfo instanceof AppInfo
+                        && TextUtils.equals(getSectionKey((AppInfo) prev.itemInfo), section)) {
                     continue;
                 }
             }
@@ -105,38 +105,6 @@ public class AllAppsSectionGutterDecoration extends RecyclerView.ItemDecoration 
         c.restore();
     }
 
-    @Override
-    public void getItemOffsets(Rect outRect, View view, RecyclerView parent,
-            RecyclerView.State state) {
-        if (!(parent instanceof AllAppsRecyclerView rv)) return;
-        AlphabeticalAppsList<?> apps = rv.getApps();
-        if (apps == null) return;
-
-        int pos = parent.getChildAdapterPosition(view);
-        if (pos == RecyclerView.NO_POSITION) return;
-
-        BaseAllAppsAdapter.AdapterItem item =
-                (BaseAllAppsAdapter.AdapterItem) apps.getAdapterItems().get(pos);
-        if (item.viewType != BaseAllAppsAdapter.VIEW_TYPE_ICON) return;
-        if (!(item.itemInfo instanceof AppInfo)) return;
-        AppInfo info = (AppInfo) item.itemInfo;
-        String section = getSectionKey(info);
-        if (TextUtils.isEmpty(section)) return;
-
-    }
-
-    private static boolean isSameSectionAsPrevious(AlphabeticalAppsList<?> apps, int pos,
-            String section) {
-        if (pos <= 0) return false;
-        BaseAllAppsAdapter.AdapterItem prev =
-                (BaseAllAppsAdapter.AdapterItem) apps.getAdapterItems().get(pos - 1);
-        if (prev.viewType != BaseAllAppsAdapter.VIEW_TYPE_ICON) {
-            return false;
-        }
-        if (!(prev.itemInfo instanceof AppInfo)) return false;
-        AppInfo prevInfo = (AppInfo) prev.itemInfo;
-        return TextUtils.equals(getSectionKey(prevInfo), section);
-    }
 
     private int getGutterWidthPx() {
         return Math.round(mActivityContext.getDeviceProfile().allAppsIconSizePx * 0.8f);

@@ -58,6 +58,7 @@ public class AlphabeticalIndexBar extends View {
     private final Paint mPreviewTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF mPreviewRect = new RectF();
+    private final Paint.FontMetrics mFontMetrics = new Paint.FontMetrics();
 
     private final Runnable mEndFastScrollRunnable = this::endFastScroll;
 
@@ -132,8 +133,8 @@ public class AlphabeticalIndexBar extends View {
 
         Set<Character> enabled = getEnabledLetters();
 
-        Paint.FontMetrics fm = mTextPaint.getFontMetrics();
-        float baseline = (h / 2f) - (fm.ascent + fm.descent) / 2f;
+        mTextPaint.getFontMetrics(mFontMetrics);
+        float baseline = (h / 2f) - (mFontMetrics.ascent + mFontMetrics.descent) / 2f;
 
         float margin = dp(24);
         float availableWidth = w - 2 * margin;
@@ -167,8 +168,8 @@ public class AlphabeticalIndexBar extends View {
         mPreviewRect.set(left, top, right, bottom);
         canvas.drawRoundRect(mPreviewRect, r, r, mPreviewBgPaint);
 
-        Paint.FontMetrics fm = mPreviewTextPaint.getFontMetrics();
-        float baseline = (top + bottom) / 2f - (fm.ascent + fm.descent) / 2f;
+        mPreviewTextPaint.getFontMetrics(mFontMetrics);
+        float baseline = (top + bottom) / 2f - (mFontMetrics.ascent + mFontMetrics.descent) / 2f;
         canvas.drawText(mPreviewText, cx, baseline, mPreviewTextPaint);
     }
 
@@ -294,8 +295,10 @@ public class AlphabeticalIndexBar extends View {
         }
 
         if (!mPreviewVisible || mActiveIndex < 0) {
-            mPreviewView.animate().cancel();
-            mPreviewView.animate().alpha(0f).setDuration(120).start();
+            if (mPreviewView.getAlpha() > 0f) {
+                mPreviewView.animate().cancel();
+                mPreviewView.animate().alpha(0f).setDuration(120).start();
+            }
             return;
         }
 
@@ -315,19 +318,27 @@ public class AlphabeticalIndexBar extends View {
 
         float x = getX() + cx - (mPreviewView.getWidth() / 2f);
         mPreviewView.setX(x);
-        mPreviewView.animate().cancel();
-        mPreviewView.animate().alpha(1f).setDuration(60).start();
+        if (mPreviewView.getAlpha() < 1f) {
+            mPreviewView.animate().cancel();
+            mPreviewView.animate().alpha(1f).setDuration(60).start();
+        }
     }
 
+    private final Set<Character> mEnabledLetters = new HashSet<>();
+    private List<CharSequence> mCachedSections = null;
+
     private Set<Character> getEnabledLetters() {
-        Set<Character> enabled = new HashSet<>();
-        if (mRv == null) return enabled;
+        if (mRv == null) return mEnabledLetters;
         List<CharSequence> sections = mRv.getFastScrollSectionNames();
+        if (sections.equals(mCachedSections)) return mEnabledLetters;
+        
+        mCachedSections = sections;
+        mEnabledLetters.clear();
         for (CharSequence s : sections) {
             char c = normalizeSectionChar(s);
-            if (c != 0) enabled.add(c);
+            if (c != 0) mEnabledLetters.add(c);
         }
-        return enabled;
+        return mEnabledLetters;
     }
 
     private float dp(float v) {

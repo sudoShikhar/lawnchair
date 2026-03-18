@@ -77,12 +77,50 @@ class LawnchairAlphabeticalAppsList<T>(
     }
 
     override fun addAppsWithSections(appList: List<AppInfo?>?, startPosition: Int): Int {
-        // For the classic A–Z drawer layout, rely entirely on the base implementation to:
-        // - sort apps alphabetically
-        // - group them by sectionName
-        // - feed fast-scroll sections
-        // Hidden apps filtering is already handled via updateItemFilter above.
-        return super.addAppsWithSections(appList, startPosition)
+        if (appList.isNullOrEmpty()) return startPosition
+        val drawerListDefault = prefs.drawerList.get()
+        filteredList.clear()
+        var position = startPosition
+
+        // Show app drawer folders only on main profile, to prevent state complexity
+        if (isWorkOrPrivateSpace(appList)) return super.addAppsWithSections(appList, position)
+
+        if (!drawerListDefault) {
+            val validApps = appList.mapNotNull { it }
+            val finalCategorizedApps = categorizeAppsWithSystemAndGoogle(validApps, context)
+
+            finalCategorizedApps.forEach { (category, apps) ->
+                if (apps.size == 1) {
+                    mAdapterItems.add(AdapterItem.asApp(apps.first()))
+                } else {
+                    val folderInfo = FolderInfo().apply {
+                        title = category
+                        apps.forEach { add(it) }
+                    }
+                    mAdapterItems.add(AdapterItem.asFolder(folderInfo))
+                }
+                position++
+            }
+        } else {
+            folderList.forEach { folder ->
+                if (folder.getContents().size > 1) {
+                    val folderInfo = FolderInfo()
+                    folderInfo.title = folder.title
+                    mAdapterItems.add(AdapterItem.asFolder(folderInfo))
+                    folder.getContents().forEach { app ->
+                        (appsStore.getApp(app.componentKey) as? AppInfo)?.let {
+                            folderInfo.add(it)
+                            if (prefs.folderApps.get()) filteredList.add(it)
+                        }
+                    }
+                }
+                position++
+            }
+            val remainingApps = appList.filterNot { app -> filteredList.contains(app) && prefs.folderApps.get() }
+            position = super.addAppsWithSections(remainingApps, position)
+        }
+
+        return position
     }
 
     override fun onIdpChanged(modelPropertiesChanged: Boolean) {
