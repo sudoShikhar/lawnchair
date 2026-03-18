@@ -79,6 +79,20 @@
             android:theme="@style/Theme.Transparent" />
 
         <activity
+            android:name="app.lawnchair.actions.AppDrawerLaunchActivity"
+            android:theme="@style/Theme.Transparent"
+            android:icon="@drawable/ic_allapps_colored"
+            android:label="@string/app_drawer_label"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:stateNotNeeded="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name="app.lawnchair.smartspace.SmartspacePreferencesShortcut"
             android:theme="@style/Theme.Transparent" />
 

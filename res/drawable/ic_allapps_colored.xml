@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector android:height="24dp" android:tint="?android:attr/colorAccent"
+        android:viewportHeight="24.0" android:viewportWidth="24.0"
+        android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
+    <path android:fillColor="#FF000000" android:pathData="M5,4 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M11,4 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M17,4 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M5,10 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M11,10 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M17,10 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M5,16 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M11,16 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z M17,16 h2 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-2 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 z"/>
+</vector>

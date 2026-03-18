@@ -215,15 +215,36 @@ class LawnchairIconProvider @JvmOverloads constructor(
     }
 
     override fun getIcon(info: ActivityInfo?): Drawable {
+        if (info?.name == "app.lawnchair.actions.AppDrawerLaunchActivity") {
+            getAppDrawerIcon()?.let { return it }
+        }
         return CustomAdaptiveIconDrawable.wrapNonNull(super.getIcon(info))
     }
 
     override fun getIcon(info: ActivityInfo?, iconDpi: Int): Drawable {
+        if (info?.name == "app.lawnchair.actions.AppDrawerLaunchActivity") {
+            getAppDrawerIcon()?.let { return it }
+        }
         return CustomAdaptiveIconDrawable.wrapNonNull(super.getIcon(info, iconDpi))
     }
 
     override fun getIcon(info: LauncherActivityInfo?, iconDpi: Int): Drawable {
+        if (info?.name == "app.lawnchair.actions.AppDrawerLaunchActivity") {
+            getAppDrawerIcon()?.let { return it }
+        }
         return CustomAdaptiveIconDrawable.wrapNonNull(super.getIcon(info, iconDpi))
+    }
+
+    private fun getAppDrawerIcon(): Drawable? {
+        val launcher = com.android.launcher3.Launcher.ACTIVITY_TRACKER.getCreatedActivity<com.android.launcher3.Launcher>()
+        val tintContext = launcher ?: context
+
+        val drawable = context.getDrawable(R.drawable.ic_allapps_colored)?.mutate()
+        if (drawable != null) {
+            drawable.setTint(app.lawnchair.theme.color.tokens.ColorTokens.ColorAccent.resolveColor(tintContext))
+            return drawable
+        }
+        return null
     }
 
     override fun getSystemStateForPackage(systemState: String, packageName: String): String {
