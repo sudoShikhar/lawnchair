@@ -9,6 +9,12 @@ For release build:
 
 `./gradlew :assembleLawnWithQuickstepPlayRelease && adb install -r build/outputs/apk/lawnWithQuickstepPlay/release/*.apk`
 
+Adding apks to git
+
+`git add -f build/outputs/apk/lawnWithQuickstepGithub/debug/Lawnchair.15.Dev.*.github.debug.apk`
+
+`git add -f build/outputs/apk/lawnWithQuickstepPlay/release/Lawnchair.15.Dev.*.play.release.apk`
+
 #
 
 [![Build debug APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml)
