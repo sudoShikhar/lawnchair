@@ -393,6 +393,12 @@ public class ItemClickHandler {
         TestLogging.recordEvent(
                 TestProtocol.SEQUENCE_MAIN, "start: startAppShortcutOrInfoActivity");
         Intent intent = item.getIntent();
+        if (intent != null && intent.getComponent() != null &&
+                "app.lawnchair.actions.AppDrawerLaunchActivity".equals(intent.getComponent().getClassName())) {
+            // Jump instantly without animations to make it lightning fast
+            launcher.getStateManager().goToState(com.android.launcher3.LauncherState.ALL_APPS, false);
+            return;
+        }
         if (item instanceof ItemInfoWithIcon itemInfoWithIcon) {
             if ((itemInfoWithIcon.runtimeStatusFlags
                     & ItemInfoWithIcon.FLAG_INSTALL_SESSION_ACTIVE) != 0) {
