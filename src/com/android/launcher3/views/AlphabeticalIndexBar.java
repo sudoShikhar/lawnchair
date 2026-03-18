@@ -56,6 +56,7 @@ public class AlphabeticalIndexBar extends View {
     private final Paint mDisabledTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mPreviewBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mPreviewTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF mPreviewRect = new RectF();
 
     private final Runnable mEndFastScrollRunnable = this::endFastScroll;
@@ -81,13 +82,16 @@ public class AlphabeticalIndexBar extends View {
 
     public AlphabeticalIndexBar(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        mTextPaint.setColor(ColorTokens.TextColorPrimary.resolveColor(getContext()));
-        mTextPaint.setAlpha(180);
+        int accentColor = ColorTokens.ColorAccent.resolveColor(getContext());
+        mTextPaint.setColor(accentColor);
+        mTextPaint.setAlpha(255);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
-        mTextPaint.setTextSize(12f * getResources().getDisplayMetrics().scaledDensity);
+        mTextPaint.setTextSize(16f * getResources().getDisplayMetrics().scaledDensity);
 
         mDisabledTextPaint.set(mTextPaint);
         mDisabledTextPaint.setAlpha(60);
+
+        mBgPaint.setColor(com.android.launcher3.util.Themes.getAttrColor(getContext(), com.android.launcher3.R.attr.popupColorPrimary));
 
         mPreviewBgPaint.setColor(ColorTokens.TextColorPrimary.resolveColor(getContext()));
         mPreviewBgPaint.setAlpha(28);
@@ -106,6 +110,7 @@ public class AlphabeticalIndexBar extends View {
         mPreviewView = previewView;
         if (mPreviewView != null) {
             mPreviewView.setAlpha(0f);
+            mPreviewView.setTextColor(ColorTokens.ColorAccent.resolveColor(getContext()));
         }
     }
 
@@ -122,15 +127,20 @@ public class AlphabeticalIndexBar extends View {
         float h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        float bgR = 0f;
+        canvas.drawRoundRect(0, 0, w, h, bgR, bgR, mBgPaint);
+
         Set<Character> enabled = getEnabledLetters();
 
         Paint.FontMetrics fm = mTextPaint.getFontMetrics();
         float baseline = (h / 2f) - (fm.ascent + fm.descent) / 2f;
 
+        float margin = dp(24);
+        float availableWidth = w - 2 * margin;
         int count = DEFAULT_ALPHABET.length;
-        float cell = w / count;
+        float cell = availableWidth / count;
         for (int i = 0; i < count; i++) {
-            float cx = (i + 0.5f) * cell;
+            float cx = margin + (i + 0.5f) * cell;
             char ch = DEFAULT_ALPHABET[i];
             boolean isEnabled = enabled.contains(ch);
             Paint p = isEnabled ? mTextPaint : mDisabledTextPaint;
@@ -164,6 +174,12 @@ public class AlphabeticalIndexBar extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        // If the view is effectively invisible (e.g. app drawer is faded out), do not intercept touches.
+        // This prevents the scrollbar from unintentionally eating long presses on the workspace.
+        if (getAlpha() < 0.01f) {
+            return false;
+        }
+
         if (mRv == null || !mRv.supportsFastScrolling()) {
             return super.onTouchEvent(event);
         }
@@ -190,17 +206,38 @@ public class AlphabeticalIndexBar extends View {
         int width = getWidth();
         if (width <= 0) return;
 
+        float margin = dp(24);
+        float availableWidth = width - 2 * margin;
+        float touchX = x - margin;
+        if (touchX < 0) touchX = 0;
+        if (touchX >= availableWidth) touchX = availableWidth - 0.001f;
+
         int idx = Utilities.boundToRange(
-                (int) ((x / (float) width) * DEFAULT_ALPHABET.length),
+                (int) ((touchX / availableWidth) * DEFAULT_ALPHABET.length),
                 0,
                 DEFAULT_ALPHABET.length - 1);
         char target = DEFAULT_ALPHABET[idx];
 
         Set<Character> enabled = getEnabledLetters();
         if (!enabled.contains(Character.toUpperCase(target))) {
-            // Disabled letter: show preview but do not scroll.
-            setActiveIndex(idx, String.valueOf(target), /*haptic*/ false);
-            return;
+            int snapIdx = idx - 1;
+            while (snapIdx >= 0) {
+                if (enabled.contains(Character.toUpperCase(DEFAULT_ALPHABET[snapIdx]))) break;
+                snapIdx--;
+            }
+            if (snapIdx < 0) {
+                snapIdx = idx + 1;
+                while (snapIdx < DEFAULT_ALPHABET.length) {
+                    if (enabled.contains(Character.toUpperCase(DEFAULT_ALPHABET[snapIdx]))) break;
+                    snapIdx++;
+                }
+            }
+            if (snapIdx >= 0 && snapIdx < DEFAULT_ALPHABET.length) {
+                idx = snapIdx;
+                target = DEFAULT_ALPHABET[idx];
+            } else {
+                return;
+            }
         }
 
         int sectionIndex = resolveSectionIndex(target, mRv.getFastScrollSectionNames());
@@ -264,9 +301,11 @@ public class AlphabeticalIndexBar extends View {
 
         mPreviewView.setText(mPreviewText);
 
+        float margin = dp(24);
+        float availableWidth = getWidth() - 2 * margin;
         int count = DEFAULT_ALPHABET.length;
-        float cell = getWidth() / (float) count;
-        float cx = (mActiveIndex + 0.5f) * cell;
+        float cell = availableWidth / (float) count;
+        float cx = margin + (mActiveIndex + 0.5f) * cell;
 
         // Wait for measure to get correct width.
         if (mPreviewView.getWidth() == 0) {

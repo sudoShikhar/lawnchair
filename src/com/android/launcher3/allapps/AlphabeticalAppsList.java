@@ -318,8 +318,7 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
                 item.rowIndex = 0;
                 if (BaseAllAppsAdapter.isDividerViewType(item.viewType)
                         || BaseAllAppsAdapter.isPrivateSpaceHeaderView(item.viewType)
-                        || BaseAllAppsAdapter.isPrivateSpaceSysAppsDividerView(item.viewType)
-                        || BaseAllAppsAdapter.isSectionHeaderViewType(item.viewType)) {
+                        || BaseAllAppsAdapter.isPrivateSpaceSysAppsDividerView(item.viewType)) {
                     numAppsInSection = 0;
                 } else if (BaseAllAppsAdapter.isIconViewType(item.viewType)) {
                     if (numAppsInSection % mNumAppsPerRowAllApps == 0) {
@@ -404,22 +403,33 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
         String lastSectionName = null;
         boolean hasPrivateApps = false;
         int position = startPosition;
+        int iconsInThisBlock = 0;
         if (mPrivateProviderManager != null) {
             hasPrivateApps = appList.stream().
                     allMatch(mPrivateProviderManager.getItemInfoMatcher());
         }
         for (int i = 0; i < appList.size(); i++) {
             AppInfo info = appList.get(i);
-            String sectionName = info.sectionName;
+            // Derive a strict A–Z section key from the app title.
+            String label = info.title == null ? "" : info.title.toString().trim();
+            char c = label.isEmpty() ? '#' : Character.toUpperCase(label.charAt(0));
+            String sectionName = (c >= 'A' && c <= 'Z') ? String.valueOf(c) : "#";
             // Create a new section if the section names do not match
             if (!sectionName.equals(lastSectionName)) {
-                lastSectionName = sectionName;
-                // Surface an explicit letter header. Skip for private apps because we rely on
-                // contiguous app items for unified background decoration.
-                if (!hasPrivateApps) {
-                    mAdapterItems.add(AdapterItem.asSectionHeader(sectionName));
-                    position++;
+                // Align the new section to a row boundary so apps start on a fresh row.
+                // Only for non-private apps, since private space uses contiguous decoration logic.
+                if (!hasPrivateApps && iconsInThisBlock > 0 && mNumAppsPerRowAllApps > 0) {
+                    int mod = iconsInThisBlock % mNumAppsPerRowAllApps;
+                    if (mod != 0) {
+                        int fillers = mNumAppsPerRowAllApps - mod;
+                        for (int f = 0; f < fillers; f++) {
+                            mAdapterItems.add(AdapterItem.asSectionSpacer());
+                            position++;
+                            iconsInThisBlock++;
+                        }
+                    }
                 }
+                lastSectionName = sectionName;
                 mFastScrollerSections.add(new FastScrollSectionInfo(hasPrivateApps ?
                         mPrivateProfileAppScrollerBadge : sectionName, position));
             }
@@ -433,6 +443,7 @@ public class AlphabeticalAppsList<T extends Context & ActivityContext> implement
                 mAdapterItems.add(AdapterItem.asApp(info));
             }
             position++;
+            iconsInThisBlock++;
         }
         return position;
     }

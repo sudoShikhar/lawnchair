@@ -80,14 +80,15 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
 
     public static final int VIEW_TYPE_FOLDER = 1 << 9;
 
-    public static final int VIEW_TYPE_SECTION_HEADER = 1 << 10;
+    // Invisible placeholder cell used to align section starts to row boundaries.
+    public static final int VIEW_TYPE_SECTION_SPACER = 1 << 10;
 
     public static final int NEXT_ID = 11;
 
     // Common view type masks
     public static final int VIEW_TYPE_MASK_DIVIDER = VIEW_TYPE_ALL_APPS_DIVIDER;
-    public static final int VIEW_TYPE_MASK_ICON = VIEW_TYPE_ICON | VIEW_TYPE_FOLDER;
-    public static final int VIEW_TYPE_MASK_SECTION_HEADER = VIEW_TYPE_SECTION_HEADER;
+    public static final int VIEW_TYPE_MASK_ICON =
+            VIEW_TYPE_ICON | VIEW_TYPE_FOLDER | VIEW_TYPE_SECTION_SPACER;
 
     public static final int VIEW_TYPE_MASK_PRIVATE_SPACE_HEADER = VIEW_TYPE_PRIVATE_SPACE_HEADER;
     public static final int VIEW_TYPE_MASK_PRIVATE_SPACE_SYS_APPS_DIVIDER = VIEW_TYPE_PRIVATE_SPACE_SYS_APPS_DIVIDER;
@@ -127,10 +128,6 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
         
         public FolderInfo folderInfo = new FolderInfo();
 
-        /** Optional section header label (e.g. "A", "B", ...). */
-        @Nullable
-        public CharSequence sectionName = null;
-
         // Private App Decorator
         public SectionDecorationInfo decorationInfo = null;
 
@@ -153,10 +150,8 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
             return item;
         }
 
-        public static AdapterItem asSectionHeader(CharSequence sectionName) {
-            AdapterItem item = new AdapterItem(VIEW_TYPE_SECTION_HEADER);
-            item.sectionName = sectionName;
-            return item;
+        public static AdapterItem asSectionSpacer() {
+            return new AdapterItem(VIEW_TYPE_SECTION_SPACER);
         }
 
         public static AdapterItem asAppWithDecorationInfo(AppInfo appInfo,
@@ -177,9 +172,6 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
             if (other.viewType != viewType || other.getClass() != getClass()) {
                 return false;
             }
-            if (viewType == VIEW_TYPE_SECTION_HEADER) {
-                return TextUtils.equals(sectionName, other.sectionName);
-            }
             return true;
         }
 
@@ -189,9 +181,6 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
          * as well. Returning true will prevent redrawing of thee item.
          */
         public boolean isContentSame(AdapterItem other) {
-            if (viewType == VIEW_TYPE_SECTION_HEADER) {
-                return TextUtils.equals(sectionName, other.sectionName);
-            }
             return itemInfo == null && other.itemInfo == null;
         }
 
@@ -254,11 +243,6 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
         return isViewType(viewType, VIEW_TYPE_MASK_PRIVATE_SPACE_SYS_APPS_DIVIDER);
     }
 
-    /** Checks if the passed viewType represents an alphabetical section header. */
-    public static boolean isSectionHeaderViewType(int viewType) {
-        return isViewType(viewType, VIEW_TYPE_MASK_SECTION_HEADER);
-    }
-
     public void setIconFocusListener(OnFocusChangeListener focusListener) {
         mIconFocusListener = focusListener;
     }
@@ -304,9 +288,14 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
                 return new ViewHolder(fl);
-            case VIEW_TYPE_SECTION_HEADER:
-                return new ViewHolder(mLayoutInflater.inflate(
-                        R.layout.all_apps_section_header, parent, false));
+            case VIEW_TYPE_SECTION_SPACER: {
+                View spacer = new View(parent.getContext());
+                spacer.setLayoutParams(new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        mActivityContext.getDeviceProfile().allAppsCellHeightPx));
+                spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                return new ViewHolder(spacer);
+            }
             default:
                 if (mAdapterProvider.isViewSupported(viewType)) {
                     return mAdapterProvider.onCreateViewHolder(mLayoutInflater, parent, viewType);
@@ -350,12 +339,9 @@ public abstract class BaseAllAppsAdapter<T extends Context & ActivityContext> ex
                 }
                 break;
             }
-            case VIEW_TYPE_SECTION_HEADER: {
-                AdapterItem adapterItem = mApps.getAdapterItems().get(position);
-                TextView header = (TextView) holder.itemView;
-                header.setText(adapterItem.sectionName);
+            case VIEW_TYPE_SECTION_SPACER:
+                holder.itemView.setVisibility(View.INVISIBLE);
                 break;
-            }
             case VIEW_TYPE_EMPTY_SEARCH: {
                 AppInfo info = mApps.getAdapterItems().get(position).itemInfo;
                 if (info != null) {

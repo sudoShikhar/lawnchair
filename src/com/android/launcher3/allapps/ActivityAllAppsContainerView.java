@@ -40,7 +40,6 @@ import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Path.Direction;
-import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Bundle;
@@ -153,7 +152,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             Process.myUserHandle());
     protected WorkProfileManager mWorkManager;
     protected final PrivateProfileManager mPrivateProfileManager;
-    protected final Point mFastScrollerOffset = new Point();
     protected int mScrimColor;
     protected final float mHeaderThreshold;
     protected final AllAppsSearchUiDelegate mSearchUiDelegate;
@@ -186,14 +184,13 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     protected View mSearchContainer;
     protected SearchUiManager mSearchUiManager;
     protected boolean mUsingTabs;
-    protected AlphabeticalIndexBar mTouchHandler;
 
     /**
      * {@code true} when rendered view is in search state instead of the scroll
      * state.
      */
     private boolean mIsSearching;
-    boolean showFastScroller;
+    // Legacy vertical fast scroller removed; bottom index bar handles navigation.
     private boolean mRebindAdaptersAfterSearchAnimation;
     private int mNavBarScrimHeight = 0;
     public SearchRecyclerView mSearchRecyclerView;
@@ -287,9 +284,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      * onFinishInflate -> onPostCreate
      */
     protected void initContent() {
-        // Vertical fast scroller is intentionally disabled in favor of the bottom A–Z bar.
-        showFastScroller = false;
-
         mMainAdapterProvider = mSearchUiDelegate.createMainAdapterProvider();
 
         mAH.set(AdapterHolder.MAIN, new AdapterHolder(AdapterHolder.MAIN,
@@ -314,8 +308,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             ViewCompat.setOnApplyWindowInsetsListener(mAlphabeticalIndexBar, (v, insets) -> {
                 int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
                 MarginLayoutParams lp = (MarginLayoutParams) v.getLayoutParams();
-                lp.bottomMargin = getResources().getDimensionPixelSize(
-                        R.dimen.alphabetical_index_bar_margin_bottom) + navBottom;
+                lp.bottomMargin = navBottom;
                 v.setLayoutParams(lp);
                 // After changing bar position, ensure lists have enough bottom padding.
                 for (int i = 0; i < mAH.size(); i++) {
@@ -544,9 +537,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                     mAH.get(i).mRecyclerView.scrollToTop();
                 }
             }
-        }
-        if (mTouchHandler != null) {
-            // No explicit end action needed for the bottom alphabetical bar.
         }
         if (mHeader != null && mHeader.getVisibility() == VISIBLE) {
             mHeader.reset(animate);
@@ -1151,7 +1141,6 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         // Workspace
         // Overview states. We shouldn't intercept for the scrubber in these cases.
         if (!isInAllApps()) {
-            mTouchHandler = null;
             return false;
         }
 
@@ -1666,6 +1655,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                     : new FocusedItemDecorator(
                             mRecyclerView);
             mRecyclerView.addItemDecoration(focusedItemDecorator);
+            if (!isSearch()) {
+                // Draw section letters in the left gutter without consuming adapter space.
+                mRecyclerView.addItemDecoration(new AllAppsSectionGutterDecoration(mActivityContext));
+            }
             mOnFocusChangeListener = focusedItemDecorator.getFocusListener();
             mAdapter.setIconFocusListener(mOnFocusChangeListener);
             applyPadding();
@@ -1674,6 +1667,11 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         void applyPadding() {
             if (mRecyclerView != null) {
                 int bottomOffset = 0;
+                int leftOffset = 0;
+                if (!isSearch()) {
+                    // Reserve a left gutter for the section letter column.
+                    leftOffset = Math.round(mActivityContext.getDeviceProfile().allAppsIconSizePx * 0.8f);
+                }
                 if (isWork() && mWorkManager.getWorkModeSwitch() != null) {
                     bottomOffset = mInsets.bottom + mWorkManager.getWorkModeSwitch().getHeight();
                 } else if (isMain() && mPrivateProfileManager != null) {
@@ -1689,15 +1687,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                     bottomOffset += mSearchContainer.getHeight();
                 }
                 if (mAlphabeticalIndexBar != null && mAlphabeticalIndexBar.getVisibility() == VISIBLE) {
-                    ViewGroup.LayoutParams lp = mAlphabeticalIndexBar.getLayoutParams();
-                    if (lp instanceof MarginLayoutParams) {
-                        bottomOffset += ((MarginLayoutParams) lp).bottomMargin;
-                    }
                     bottomOffset += mAlphabeticalIndexBar.getHeight();
-                    // Also account for any system insets applied as padding to the bar.
-                    bottomOffset += mAlphabeticalIndexBar.getPaddingBottom();
                 }
-                mRecyclerView.setPadding(mPadding.left, mPadding.top, mPadding.right,
+                mRecyclerView.setPadding(mPadding.left + leftOffset, mPadding.top, mPadding.right,
                         mPadding.bottom + bottomOffset);
             }
         }

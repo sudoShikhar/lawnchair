@@ -108,7 +108,6 @@ public class RecyclerViewFastScroller extends View {
     private final Point mThumbDrawOffset = new Point();
 
     private final Paint mTrackPaint;
-    private final Paint mSectionPaint;
 
     private float mLastTouchY;
     private boolean mIsDragging;
@@ -162,13 +161,6 @@ public class RecyclerViewFastScroller extends View {
         mThumbPaint.setAntiAlias(true);
         mThumbPaint.setColor(Themes.getColorAccent(context));
         mThumbPaint.setStyle(Paint.Style.FILL);
-
-        mSectionPaint = new Paint();
-        mSectionPaint.setAntiAlias(true);
-        mSectionPaint.setTextAlign(Paint.Align.CENTER);
-        mSectionPaint.setColor(ColorTokens.TextColorPrimary.resolveColor(getContext()));
-        mSectionPaint.setAlpha(160);
-        mSectionPaint.setTextSize(10f * getResources().getDisplayMetrics().scaledDensity);
 
         Resources res = getResources();
         mWidth = mMinWidth = res.getDimensionPixelSize(R.dimen.fastscroll_track_min_width);
@@ -276,10 +268,6 @@ public class RecyclerViewFastScroller extends View {
                 }
                 if (isNearThumb(x, y)) {
                     mTouchOffsetY = mDownY - mThumbOffsetY;
-                } else if (mRv != null && isNearScrollBar(x) && isInScrollTrackY(y)) {
-                    // Allow starting a fast scroll gesture anywhere on the rail.
-                    // Center the thumb around the finger.
-                    mTouchOffsetY = mThumbHeight / 2;
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
@@ -293,9 +281,8 @@ public class RecyclerViewFastScroller extends View {
                 mIgnoreDragGesture |= absDeltaY > mConfig.getScaledPagingTouchSlop();
 
                 if (!mIsDragging && !mIgnoreDragGesture && mRv.supportsFastScrolling()) {
-                    if (((isNearThumb(mDownX, mLastY)
-                            || (isNearScrollBar(mDownX) && isInScrollTrackY(mLastY)))
-                            && ev.getEventTime() - mDownTimeStampMillis > FASTSCROLL_THRESHOLD_MILLIS)) {
+                    if ((isNearThumb(mDownX, mLastY) && ev.getEventTime() - mDownTimeStampMillis
+                                    > FASTSCROLL_THRESHOLD_MILLIS)) {
                         calcTouchOffsetAndPrepToFastScroll(mDownY, mLastY);
                     }
                 }
@@ -351,10 +338,6 @@ public class RecyclerViewFastScroller extends View {
         setThumbOffsetY((int) mLastTouchY);
     }
 
-    private boolean isInScrollTrackY(int y) {
-        return y >= 0 && y <= mRv.getScrollbarTrackHeight();
-    }
-
     /** End any active fast scrolling touch handling, if applicable. */
     public void endFastScrolling() {
         mRv.onFastScrollCompleted();
@@ -377,26 +360,6 @@ public class RecyclerViewFastScroller extends View {
         canvas.translate(getWidth() / 2, mRv.getScrollBarTop());
         mThumbDrawOffset.set(getWidth() / 2, mRv.getScrollBarTop());
 
-        // Draw section labels (A–Z rail) behind the track + thumb.
-        List<CharSequence> sections = mRv.getFastScrollSectionNames();
-        if (!sections.isEmpty()) {
-            float trackH = mRv.getScrollbarTrackHeight();
-            int maxLabels = 28; // A–Z + '#'
-            if (sections.size() > maxLabels) {
-                float step = (sections.size() - 1f) / (maxLabels - 1f);
-                for (int i = 0; i < maxLabels; i++) {
-                    int idx = Math.round(i * step);
-                    drawSectionLabel(canvas, sections.get(idx), (i / (maxLabels - 1f)) * trackH);
-                }
-            } else if (sections.size() == 1) {
-                drawSectionLabel(canvas, sections.get(0), trackH / 2f);
-            } else {
-                float denom = (sections.size() - 1f);
-                for (int i = 0; i < sections.size(); i++) {
-                    drawSectionLabel(canvas, sections.get(i), (i / denom) * trackH);
-                }
-            }
-        }
         // Draw the track
         float halfW = mWidth / 2;
         canvas.drawRoundRect(-halfW, 0, halfW, mRv.getScrollbarTrackHeight(),
@@ -420,26 +383,6 @@ public class RecyclerViewFastScroller extends View {
             setSystemGestureExclusionRects(SYSTEM_GESTURE_EXCLUSION_RECT);
         }
         canvas.restoreToCount(saveCount);
-    }
-
-    private void drawSectionLabel(Canvas canvas, CharSequence label, float y) {
-        String text = normalizeSectionLabel(label);
-        if (TextUtils.isEmpty(text)) return;
-        Paint.FontMetrics fm = mSectionPaint.getFontMetrics();
-        float baseline = y - (fm.ascent + fm.descent) / 2f;
-        canvas.drawText(text, 0, baseline, mSectionPaint);
-    }
-
-    private String normalizeSectionLabel(CharSequence label) {
-        if (label == null) return "";
-        String s = String.valueOf(label).trim();
-        if (s.isEmpty()) return "";
-        // Skip work profile edu section icon to keep the A–Z rail clean.
-        if ("ⓘ".equals(s)) return "";
-        if (s.length() > 1) {
-            s = s.substring(0, 1);
-        }
-        return s;
     }
 
     @Override
