@@ -1,5 +1,16 @@
 # Lawnchair 15
 
+# Shikhar's Notes
+For debug build:
+
+`./gradlew :assembleLawnWithQuickstepGithubDebug && adb install -r build/outputs/apk/lawnWithQuickstepGithub/debug/*.apk`
+
+For release build:
+
+`./gradlew :assembleLawnWithQuickstepPlayRelease && adb install -r build/outputs/apk/lawnWithQuickstepPlay/release/*.apk`
+
+#
+
 [![Build debug APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml)
 [![Build release APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/release_update.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/release_update.yml)
 [![Crowdin](https://badges.crowdin.net/e/188ba69d884418987f0b7f1dd55e3a4e/localized.svg)](https://lawnchair.crowdin.com/lawnchair)
